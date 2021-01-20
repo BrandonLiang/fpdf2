@@ -928,10 +928,7 @@ class FPDF:
 
         if fill == 1 or border == 1:
             if fill == 1:
-                if border == 1:
-                    op = "B"
-                else:
-                    op = "f"
+                op = "B" if border == 1 else "f"
             else:
                 op = "S"
             s = (
@@ -1064,7 +1061,8 @@ class FPDF:
             link (str): optional link to add
             ln (int): Indicates where the current position should go after the call.
                 Possible values are: `0`: to the right ; `1`: to the beginning of the next line ;
-                `2`: below. Putting 1 is equivalent to putting 0 and calling `ln` just after.
+                `2`: below ; `3`: to the right .
+                Putting 1 is equivalent to putting 0 and calling `ln` just after.
                 Default value: 0.
 
         Returns: a boolean indicating if page break was triggered.
@@ -1115,6 +1113,7 @@ class FPDF:
         l = 0
         ns = 0
         nl = 1
+        prev_y = None
         while i < normalized_string_length:
             # Get next character
             c = s[i]
@@ -1125,6 +1124,10 @@ class FPDF:
                     self.ws = 0
                     self._out("0 Tw")
 
+                if ln == 3:
+                    # Halving cell height by 2 to put twice as much text in it vertically:
+                    h /= 2
+                    prev_y = self.y
                 new_page = self.cell(
                     w,
                     h=h,
@@ -1166,6 +1169,10 @@ class FPDF:
                         self.ws = 0
                         self._out("0 Tw")
 
+                    if ln == 3:
+                        # Halving cell height by 2 to put twice as much text in it vertically:
+                        h /= 2
+                        prev_y = self.y
                     new_page = self.cell(
                         w,
                         h=h,
@@ -1187,6 +1194,10 @@ class FPDF:
                             self.ws = 0
                         self._out(f"{self.ws * self.k:.3f} Tw")
 
+                    if ln == 3:
+                        # Halving cell height by 2 to put twice as much text in it vertically:
+                        h /= 2
+                        prev_y = self.y
                     new_page = self.cell(
                         w,
                         h=h,
@@ -1218,16 +1229,20 @@ class FPDF:
         if border and "B" in border:
             b += "B"
 
+        prev_x = self.x
         new_page = self.cell(
             w,
             h=h,
             txt=substr(s, j, i - j),
             border=b,
-            ln=2,
+            ln=0 if ln == 3 else ln,
             align=align,
             fill=fill,
             link=link,
         )
+        self.x = prev_x
+        if prev_y:
+            self.y = prev_y
         page_break_triggered = page_break_triggered or new_page
         text_cells.append(substr(s, j, i - j))
 
@@ -1478,19 +1493,25 @@ class FPDF:
     def _putpages(self):
         nb = self.page
         if self.str_alias_nb_pages:
+            substituted = False
             # Replace number of pages in fonts using subsets (unicode)
             alias = self.str_alias_nb_pages.encode("UTF-16BE")
             encoded_nb = str(nb).encode("UTF-16BE")
             for n in range(1, nb + 1):
-                self.pages[n]["content"] = self.pages[n]["content"].replace(
-                    alias, encoded_nb
-                )
+                new_content = self.pages[n]["content"].replace(alias, encoded_nb)
+                substituted |= self.pages[n]["content"] != new_content
+                self.pages[n]["content"] = new_content
             # Now repeat for no pages in non-subset fonts
             alias = self.str_alias_nb_pages.encode("latin-1")
             encoded_nb = str(nb).encode("latin-1")
             for n in range(1, nb + 1):
-                self.pages[n]["content"] = self.pages[n]["content"].replace(
-                    alias, encoded_nb
+                new_content = self.pages[n]["content"].replace(alias, encoded_nb)
+                substituted |= self.pages[n]["content"] != new_content
+                self.pages[n]["content"] = new_content
+            if substituted:
+                LOGGER.info(
+                    "Substitution of '%s' was performed in the document",
+                    self.str_alias_nb_pages,
                 )
         if self.def_orientation == "P":
             dw_pt = self.dw_pt

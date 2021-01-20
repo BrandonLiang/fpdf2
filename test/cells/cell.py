@@ -5,14 +5,16 @@ from test.utilities import assert_pdf_equal
 
 # python -m unittest test.cell_multi_cell_refactor.cell
 
+TEXT_SIZE, SPACING = 36, 1.15
+LINE_HEIGHT = TEXT_SIZE * SPACING
+
 
 class CellTest(unittest.TestCase):
     def test_ln_positioning_and_page_breaking_for_cell(self):
         doc = fpdf.FPDF(format="letter", unit="pt")
         doc.add_page()
 
-        my_text_size = 36
-        doc.set_font("helvetica", size=my_text_size)
+        doc.set_font("helvetica", size=TEXT_SIZE)
         text = (
             "Lorem ipsum Ut nostrud irure reprehenderit anim nostrud dolore sed "
             "ut Excepteur dolore ut sunt irure consectetur tempor eu tempor "
@@ -47,6 +49,35 @@ class CellTest(unittest.TestCase):
         assert_pdf_equal(
             self, doc, "test_ln_positioning_and_page_breaking_for_cell.pdf"
         )
+
+    def test_cell_ln_0(self):
+        doc = fpdf.FPDF()
+        doc.add_page()
+        doc.set_font("helvetica", size=TEXT_SIZE)
+        doc.cell(w=45, h=LINE_HEIGHT, border=1, txt="Lorem")
+        doc.cell(w=45, h=LINE_HEIGHT, border=1, txt="ipsum")
+        doc.cell(w=45, h=LINE_HEIGHT, border=1, txt="Ut")
+        doc.cell(w=45, h=LINE_HEIGHT, border=1, txt="nostrud")
+        assert_pdf_equal(self, doc, "test_ln_0.pdf")
+
+    def test_cell_ln_1(self):
+        """
+        Validating that: "Putting 1 is equivalent to putting 0 and calling `ln` just after."
+        """
+        doc = fpdf.FPDF()
+        doc.add_page()
+        doc.set_font("helvetica", size=TEXT_SIZE)
+        doc.cell(w=100, h=LINE_HEIGHT, border=1, txt="Lorem ipsum", ln=1)
+        doc.cell(w=100, h=LINE_HEIGHT, border=1, txt="Ut nostrud irure")
+        assert_pdf_equal(self, doc, "test_ln_1.pdf")
+
+        doc = fpdf.FPDF()
+        doc.add_page()
+        doc.set_font("helvetica", size=TEXT_SIZE)
+        doc.cell(w=100, h=LINE_HEIGHT, border=1, txt="Lorem ipsum")
+        doc.ln()
+        doc.cell(w=100, h=LINE_HEIGHT, border=1, txt="Ut nostrud irure")
+        assert_pdf_equal(self, doc, "test_ln_1.pdf")
 
 
 if __name__ == "__main__":

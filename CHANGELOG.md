@@ -9,7 +9,9 @@ and [PEP 440](https://www.python.org/dev/peps/pep-0440/).
 
 ## [2.2.1] - Not released yet
 ### Added
-- `FPDF.image` now accept also a `Pillow.Image.Image` as input
+- `FPDF.image` now accepts also a `Pillow.Image.Image` as input
+- `FPDF.multi_cell` now accepts a value of `3` for its `ln` parameter,
+in order to generate tables with multiline text in cells
 - documentation on how to add content to existing PDFs
 ### Fixed
 - `alias_nb_pages`: fixed this feature that was broken, probably since v2.0.6
